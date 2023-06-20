@@ -100,24 +100,6 @@ const VerticalSlider: React.FC<SliderProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(calculateValues, []);
 
-  const _calculateValue = (gestureState: PanResponderGestureState) => {
-    const ratio = -gestureState.dy / height;
-    const diff = max - min;
-    return step
-      ? Math.max(
-          min,
-          Math.min(
-            max,
-            // @ts-ignore
-            _moveStartValue.value + Math.round((ratio * diff) / step) * step
-          )
-        )
-      : Math.floor(
-          // @ts-ignore
-          Math.max(min, _moveStartValue.value + ratio * diff) * 100
-        ) / 100;
-  };
-
   // Make values stable stand in between min and max
   const _clamp = (newValue: number, minValue: number, maxValue: number) => {
     return Math.min(Math.max(newValue, minValue), maxValue);
@@ -129,44 +111,63 @@ const VerticalSlider: React.FC<SliderProps> = ({
     value.setValue(valueToUpdate);
   };
 
-  // PanResponder handlers
-  const onStartShouldSetPanResponder = () => true;
-  const onMoveShouldSetPanResponder = () => false;
-  const onPanResponderTerminationRequest = () => false;
-  const onPanResponderGrant = () => {
-    _moveStartValue.value = _value.value;
-  };
-  const onPanResponderMove = (
-    _event: GestureResponderEvent,
-    gestureState: PanResponderGestureState
-  ) => {
-    if (disabled) {
-      return;
-    }
-    onChange(_calculateValue(gestureState));
-  };
-  const onPanResponderRelease = (
-    _event: GestureResponderEvent,
-    gestureState: PanResponderGestureState
-  ) => {
-    if (disabled) {
-      return;
-    }
-    onChange(_calculateValue(gestureState));
-  };
-  const onPanResponderTerminate = (
-    _event: GestureResponderEvent,
-    gestureState: PanResponderGestureState
-  ) => {
-    if (disabled) {
-      return;
-    }
-    onComplete(_calculateValue(gestureState));
-  };
-  // End PanResponder handlers
   // Value connected to state, slider height Animated Value, ballHeight Animated Value, panResponder
-  const panResponder = React.useRef(
-    PanResponder.create({
+  const panResponder = React.useMemo(() => {
+    const _calculateValue = (gestureState: PanResponderGestureState) => {
+      const ratio = -gestureState.dy / height;
+      const diff = max - min;
+      return step
+        ? Math.max(
+            min,
+            Math.min(
+              max,
+              // @ts-ignore
+              _moveStartValue.value + Math.round((ratio * diff) / step) * step
+            )
+          )
+        : Math.floor(
+            // @ts-ignore
+            Math.max(min, _moveStartValue.value + ratio * diff) * 100
+          ) / 100;
+    };
+
+    // PanResponder handlers
+    const onStartShouldSetPanResponder = () => true;
+    const onMoveShouldSetPanResponder = () => false;
+    const onPanResponderTerminationRequest = () => false;
+    const onPanResponderGrant = () => {
+      _moveStartValue.value = _value.value;
+    };
+    const onPanResponderMove = (
+      _event: GestureResponderEvent,
+      gestureState: PanResponderGestureState
+    ) => {
+      if (disabled) {
+        return;
+      }
+      onChange(_calculateValue(gestureState));
+    };
+    const onPanResponderRelease = (
+      _event: GestureResponderEvent,
+      gestureState: PanResponderGestureState
+    ) => {
+      if (disabled) {
+        return;
+      }
+      onChange(_calculateValue(gestureState));
+    };
+    const onPanResponderTerminate = (
+      _event: GestureResponderEvent,
+      gestureState: PanResponderGestureState
+    ) => {
+      if (disabled) {
+        return;
+      }
+      onComplete(_calculateValue(gestureState));
+    };
+    // End PanResponder handlers
+
+    return PanResponder.create({
       onStartShouldSetPanResponder,
       onMoveShouldSetPanResponder,
       onPanResponderTerminationRequest,
@@ -174,8 +175,18 @@ const VerticalSlider: React.FC<SliderProps> = ({
       onPanResponderMove,
       onPanResponderRelease,
       onPanResponderTerminate,
-    })
-  ).current;
+    });
+  }, [
+    _moveStartValue,
+    _value.value,
+    disabled,
+    height,
+    max,
+    min,
+    onChange,
+    onComplete,
+    step,
+  ]);
   // End Value connected to state, slider height Animated Value, ballHeight Animated Value, panResponder
 
   const sliderStyle = useAnimatedStyle(
